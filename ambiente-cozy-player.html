@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Ambiente — Second Brain</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #faf5ec;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ambient-player * { box-sizing: border-box; }
+  .ambient-player {
+    --surface-2: #ffffff;
+    --surface-1: #faf5ec;
+    --border: #e8dcc8;
+    --border-strong: #d9c7a8;
+    --ink: #c96442;
+    --text-primary: #3d2c20;
+    --text-secondary: #8a7561;
+    --text-muted: #b0a08c;
+    --radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    color: var(--text-primary);
+  }
+
+  .ap-now {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.1rem;
+  }
+
+  .ap-play {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .ap-play:hover { background: var(--surface-1); }
+  .ap-play.playing {
+    background: var(--ink);
+    border-color: var(--ink);
+  }
+  .ap-play svg { width: 16px; height: 16px; }
+  .ap-play .icon-play { fill: var(--text-primary); }
+  .ap-play.playing .icon-play { fill: #ffffff; }
+  .ap-play .icon-pause { fill: #ffffff; }
+
+  .ap-info { min-width: 0; }
+  .ap-title {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ap-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ap-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .ap-live-dot.live { background: var(--ink); }
+
+  .ap-sounds {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 1.1rem;
+  }
+  .ap-sound {
+    font-family: inherit;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 12px 4px;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .ap-sound:hover { background: var(--surface-1); }
+  .ap-sound-icon { font-size: 19px; line-height: 1; }
+  .ap-sound-label { font-size: 11px; font-weight: 600; }
+  .ap-sound.active {
+    background: var(--ink);
+    color: #ffffff;
+    border-color: var(--ink);
+  }
+
+  .ap-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+  }
+  .ap-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 170px;
+  }
+  .ap-volume svg { width: 14px; height: 14px; flex-shrink: 0; fill: var(--text-muted); }
+  .ap-volume input[type="range"] {
+    flex: 1;
+    accent-color: var(--ink);
+  }
+  .ap-credit {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .ap-credit a {
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .ap-unlock-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(61,44,32,0.06);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+  }
+  .ap-unlock-overlay.show { display: flex; }
+  .ap-unlock-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    box-shadow: 0 4px 16px rgba(61,44,32,0.08);
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient-player">
+
+  <div class="ap-now">
+    <button class="ap-play" id="ap-play" aria-label="Reproducir">
+      <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <div class="ap-info">
+      <div class="ap-title" id="ap-title">Chimenea</div>
+      <div class="ap-subtitle">
+        <span class="ap-live-dot" id="ap-live-dot"></span>
+        <span id="ap-subtitle-text">Pausado</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="ap-sounds" id="ap-sounds">
+    <button class="ap-sound active" data-key="fireplace">
+      <span class="ap-sound-icon">🔥</span>
+      <span class="ap-sound-label">Chimenea</span>
+    </button>
+    <button class="ap-sound" data-key="rain">
+      <span class="ap-sound-icon">🌧️</span>
+      <span class="ap-sound-label">Lluvia</span>
+    </button>
+    <button class="ap-sound" data-key="sea">
+      <span class="ap-sound-icon">🌊</span>
+      <span class="ap-sound-label">Mar</span>
+    </button>
+    <button class="ap-sound" data-key="birds">
+      <span class="ap-sound-icon">🐦</span>
+      <span class="ap-sound-label">Jardín</span>
+    </button>
+  </div>
+
+  <div class="ap-bottom">
+    <div class="ap-volume">
+      <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-.77-3.29-2-4.28v8.56c1.23-.99 2-2.51 2-4.28z"/></svg>
+      <input type="range" id="ap-volume-slider" min="0" max="100" value="65">
+    </div>
+    <div class="ap-credit">Sonidos vía <a href="https://pixabay.com" target="_blank" rel="noopener">Pixabay</a></div>
+  </div>
+
+</div>
+
+<div class="ap-unlock-overlay" id="ap-unlock-overlay">
+  <div class="ap-unlock-card">Toca en cualquier lugar para reproducir ▸</div>
+</div>
+
+<script>
+(function(){
+  const sounds = {
+    fireplace: { label: 'Chimenea', file: 'sounds/fireplace.mp3' },
+    rain:      { label: 'Lluvia',   file: 'sounds/rain.mp3' },
+    sea:       { label: 'Mar',      file: 'sounds/sea.mp3' },
+    birds:     { label: 'Jardín',   file: 'sounds/birds.mp3' }
+  };
+
+  let activeKey = 'fireplace';
+  let playing = false;
+
+  const audio = new Audio();
+  audio.preload = 'none';
+  audio.loop = true;
+
+  const playBtn = document.getElementById('ap-play');
+  const iconPlay = playBtn.querySelector('.icon-play');
+  const iconPause = playBtn.querySelector('.icon-pause');
+  const titleEl = document.getElementById('ap-title');
+  const subtitleText = document.getElementById('ap-subtitle-text');
+  const liveDot = document.getElementById('ap-live-dot');
+  const soundBtns = document.querySelectorAll('.ap-sound');
+  const volumeSlider = document.getElementById('ap-volume-slider');
+
+  audio.volume = volumeSlider.value / 100;
+
+  function updateInfo(status){
+    titleEl.textContent = sounds[activeKey].label;
+    subtitleText.textContent = status;
+  }
+
+  function setPlayingUI(isPlaying){
+    playing = isPlaying;
+    playBtn.classList.toggle('playing', isPlaying);
+    iconPlay.style.display = isPlaying ? 'none' : 'block';
+    iconPause.style.display = isPlaying ? 'block' : 'none';
+    liveDot.classList.toggle('live', isPlaying);
+    updateInfo(isPlaying ? 'En loop' : 'Pausado');
+  }
+
+  const unlockOverlay = document.getElementById('ap-unlock-overlay');
+
+  function showUnlockOverlay(){ unlockOverlay.classList.add('show'); }
+  function hideUnlockOverlay(){ unlockOverlay.classList.remove('show'); }
+
+  unlockOverlay.addEventListener('click', function(){
+    audio.play().then(hideUnlockOverlay).catch(function(){});
+  });
+
+  function loadSound(key, autoplay){
+    activeKey = key;
+    soundBtns.forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.key === key);
+    });
+    audio.src = sounds[key].file;
+    updateInfo(autoplay ? 'Cargando…' : 'Pausado');
+    if(autoplay){
+      audio.play().then(hideUnlockOverlay).catch(function(){
+        showUnlockOverlay();
+      });
+    }
+  }
+
+  audio.addEventListener('playing', function(){
+    setPlayingUI(true);
+    hideUnlockOverlay();
+  });
+  audio.addEventListener('pause', function(){ setPlayingUI(false); });
+  audio.addEventListener('error', function(){ updateInfo('No disponible'); });
+
+  playBtn.addEventListener('click', function(){
+    if(playing){
+      audio.pause();
+    } else {
+      if(!audio.src){ audio.src = sounds[activeKey].file; }
+      updateInfo('Cargando…');
+      audio.play().catch(function(){ updateInfo('No disponible'); });
+    }
+  });
+
+  soundBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      if(btn.dataset.key === activeKey && audio.src){
+        if(!playing){
+          updateInfo('Cargando…');
+          audio.play().catch(function(){ updateInfo('No disponible'); });
+        }
+        return;
+      }
+      loadSound(btn.dataset.key, true);
+    });
+  });
+
+  volumeSlider.addEventListener('input', function(){
+    audio.volume = volumeSlider.value / 100;
+  });
+
+  updateInfo('Pausado');
+})();
+</script>
+
+</body>
+</html>
